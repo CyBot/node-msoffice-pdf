@@ -15,7 +15,7 @@ using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 public class Startup
 {
 	[DllImport("user32.dll", CharSet = CharSet.Auto)]
-	static extern IntPtr SendMessage(IntPtr hWnd, UInt32 Msg, IntPtr wParam, IntPtr lParam);
+	static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
 	[DllImport("oleacc.dll", SetLastError = true)]
 	internal static extern IntPtr GetProcessHandleFromHwnd(IntPtr hwnd);
@@ -23,7 +23,7 @@ public class Startup
 	[DllImport("kernel32.dll")]
 	internal static extern int GetProcessId(IntPtr handle);
 
-	const UInt32 WM_CLOSE = 0x0010;
+	const uint wm_close = 0x0010;
 
 	Word.Application msword;
 	Excel.Application msexcel;
@@ -31,75 +31,97 @@ public class Startup
 	TaskFactory scheduler;
 	public async Task<object> Invoke(object input)
 	{
-		scheduler = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
+		this.scheduler = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
 
-		return new {
-			word = (Func<object,Task<dynamic>>)word,
-			excel = (Func<object,Task<dynamic>>)excel,
-			powerPoint = (Func<object,Task<dynamic>>)powerPoint,
-			close = (Func<object,Task<dynamic>>)close,
+		return new
+		{
+			word = (Func<object, Task<dynamic>>)GetWord,
+			excel = (Func<object, Task<dynamic>>)GetExcel,
+			powerPoint = (Func<object, Task<dynamic>>)GetPowerPoint,
+			close = (Func<object, Task<dynamic>>)Close,
 		};
 	}
 
-	void Delay(int stage) {
+	void Delay(int stage)
+	{
 		//Thread.Sleep(100);
 	}
 
-	private void CreateWord() {
-		lock(this) {
-			if (msword == null) {
-				msword = new Word.Application();
-				msword.Visible = true;
-				msword.DisplayAlerts = Word.WdAlertLevel.wdAlertsNone;
-				msword.ChangeFileOpenDirectory(Directory.GetCurrentDirectory());
-				msword.AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable;
+	private void CreateWord()
+	{
+		lock (this)
+		{
+			if (this.msword == null)
+			{
+				this.msword = new Word.Application
+				{
+					Visible = true,
+					DisplayAlerts = Word.WdAlertLevel.wdAlertsNone,
+					AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable
+				};
+				this.msword.ChangeFileOpenDirectory(Directory.GetCurrentDirectory());
 			}
 		}
 	}
 
-	private void CreateExcel() {
-		lock (this) {
-			if (msexcel == null) {
-				msexcel = new Excel.Application();
-				msexcel.Visible = true;
-				msexcel.DisplayAlerts = false;
-				msexcel.DefaultFilePath = Directory.GetCurrentDirectory();
-				msexcel.AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable;
-				msexcel.AskToUpdateLinks = false;
+	private void CreateExcel()
+	{
+		lock (this)
+		{
+			if (this.msexcel == null)
+			{
+				this.msexcel = new Excel.Application
+				{
+					Visible = true,
+					DisplayAlerts = false,
+					DefaultFilePath = Directory.GetCurrentDirectory(),
+					AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable,
+					AskToUpdateLinks = false
+				};
 			}
 		}
 	}
 
-	private void CreatePowerPoint() {
-		lock(this) {
-			if (mspowerpoint == null) {
-				mspowerpoint = new PowerPoint.Application();
-				mspowerpoint.Visible = MsoTriState.msoTrue;
-				mspowerpoint.DisplayAlerts = PowerPoint.PpAlertLevel.ppAlertsNone;
-				mspowerpoint.AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable;
+	private void CreatePowerPoint()
+	{
+		lock (this)
+		{
+			if (this.mspowerpoint == null)
+			{
+				this.mspowerpoint = new PowerPoint.Application
+				{
+					Visible = MsoTriState.msoTrue,
+					DisplayAlerts = PowerPoint.PpAlertLevel.ppAlertsNone,
+					AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable
+				};
 
-				//No way to do this in powerpoint, it seems
-				//mspowerpoint.?Path? = Directory.GetCurrentDirectory();
+				// No way to do this in powerpoint, it seems
+				//this.mspowerpoint.?Path? = Directory.GetCurrentDirectory();
 			}
 		}
 	}
 
-	public async Task<dynamic> word(dynamic opts) {
-		var file = Path.GetFullPath(opts.input as string);
-		var pdfFile = Path.GetFullPath(opts.output as string);
+	public async Task<dynamic> GetWord(dynamic opts)
+	{
 
-		return await scheduler.StartNew(() => {
+		string file = Path.GetFullPath(opts.input as string);
+		string pdfFile = Path.GetFullPath(opts.output as string);
+
+		return await this.scheduler.StartNew(() =>
+		{
 			Thread.Sleep(100);
 			CreateWord();
 
-			var doc = msword.Documents.OpenNoRepairDialog(file, false, true, false, "", "", true, "", "", Type.Missing, Type.Missing, true, true, Type.Missing, true, Type.Missing);
+			Word.Document doc = this.msword.Documents.OpenNoRepairDialog(file, false, true, false, "", "", true, "", "", Type.Missing, Type.Missing, true, true, Type.Missing, true, Type.Missing);
 			Delay(0);
-			try {
+			try
+			{
 				Delay(1);
 				doc.ExportAsFixedFormat(pdfFile, Word.WdExportFormat.wdExportFormatPDF);
 				Delay(2);
 			}
-			finally {
+			finally
+			{
 				(doc as Word._Document).Close(false);
 				Marshal.ReleaseComObject(doc);
 			}
@@ -109,22 +131,27 @@ public class Startup
 		});
 	}
 
-	public async Task<dynamic> excel(dynamic opts) {
-		var file = Path.GetFullPath(opts.input as string);
-		var pdfFile = Path.GetFullPath(opts.output as string);
+	public async Task<dynamic> GetExcel(dynamic opts)
+	{
+		string file = Path.GetFullPath(opts.input as string);
+		string pdfFile = Path.GetFullPath(opts.output as string);
 
-		return await scheduler.StartNew(() => {
+		return await this.scheduler.StartNew(() =>
+		{
 			Thread.Sleep(100);
 			CreateExcel();
 
-			var book = msexcel.Workbooks.Open(file, 2, true, Type.Missing, "", "", false, Type.Missing, Type.Missing, false, false, Type.Missing, false, true, Excel.XlCorruptLoad.xlNormalLoad);
+			Excel.Workbook book = this.msexcel.Workbooks.Open(file, 2, true, Type.Missing, "", "", false, Type.Missing, Type.Missing, false, false, Type.Missing, false, true, Excel.XlCorruptLoad.xlNormalLoad);
 			Delay(0);
 
-			try {
+			try
+			{
 				Delay(1);
 				book.ExportAsFixedFormat(Excel.XlFixedFormatType.xlTypePDF, pdfFile, Excel.XlFixedFormatQuality.xlQualityStandard, true, false);
 				Delay(2);
-			} finally {
+			}
+			finally
+			{
 				(book as Excel._Workbook).Close(false);
 				Marshal.ReleaseComObject(book);
 			}
@@ -134,22 +161,28 @@ public class Startup
 		});
 	}
 
-	public async Task<dynamic> powerPoint(dynamic opts) {
-		var file = Path.GetFullPath(opts.input as string);
-		var pdfFile = Path.GetFullPath(opts.output as string);
+	public async Task<dynamic> GetPowerPoint(dynamic opts)
+	{
 
-		return await scheduler.StartNew(() => {
+		string file = Path.GetFullPath(opts.input as string);
+		string pdfFile = Path.GetFullPath(opts.output as string);
+
+		return await this.scheduler.StartNew(() =>
+		{
 			Thread.Sleep(100);
 			CreatePowerPoint();
 
-			var presso = mspowerpoint.Presentations.Open(file, MsoTriState.msoTrue, WithWindow: MsoTriState.msoFalse);
+			PowerPoint.Presentation presso = this.mspowerpoint.Presentations.Open(file, MsoTriState.msoTrue, WithWindow: MsoTriState.msoFalse);
 			Delay(0);
-			try {
+			try
+			{
 				Delay(1);
 				//presso.ExportAsFixedFormat(pdfFile, PowerPoint.PpFixedFormatType.ppFixedFormatTypePDF, PowerPoint.PpFixedFormatIntent.ppFixedFormatIntentPrint);
 				presso.SaveAs(pdfFile, PowerPoint.PpSaveAsFileType.ppSaveAsPDF);
 				Delay(2);
-			} finally {
+			}
+			finally
+			{
 				presso.Close();
 				Marshal.ReleaseComObject(presso);
 			}
@@ -159,52 +192,63 @@ public class Startup
 		});
 	}
 
-	private void closeInternal() {
+	private void closeInternal()
+	{
 		Delay(4);
 
-		if (msword != null) {
-			try {
-				(msword as Word._Application).Quit();
+		if (this.msword != null)
+		{
+			try
+			{
+				(this.msword as Word._Application).Quit();
 			}
 			catch (Exception) { }
-			Marshal.ReleaseComObject(msword);
-			msword = null;
+			Marshal.ReleaseComObject(this.msword);
+			this.msword = null;
 		}
 
-		if (msexcel != null) {
-			try {
-				msexcel.Quit();
+
+		if (this.msexcel != null)
+		{
+			try
+			{
+				this.msexcel.Quit();
 			}
 			catch (Exception) { }
 
-			Marshal.ReleaseComObject(msexcel);
-			msexcel = null;
+			Marshal.ReleaseComObject(this.msexcel);
+			this.msexcel = null;
 		}
 
-		if (mspowerpoint != null) {
-			try {
-				mspowerpoint.Quit();
+		if (this.mspowerpoint != null)
+		{
+			try
+			{
+				this.mspowerpoint.Quit();
 			}
 			catch (Exception) { }
 
-			Marshal.ReleaseComObject(mspowerpoint);
-			mspowerpoint = null;
+			Marshal.ReleaseComObject(this.mspowerpoint);
+			this.mspowerpoint = null;
 		}
 
 		Thread.Sleep(1000);
 	}
 
 	// Close open office apps on cleanup
-	public async Task<object> close(dynamic opts) {
+	public async Task<object> Close(dynamic opts)
+	{
 		// Powerpoint & co sometimes need some more time before they can quit grafeully
-		return await scheduler.StartNew(() => {
+		return await this.scheduler.StartNew(() =>
+		{
 			closeInternal();
 			return true;
 		});
 	}
 
-	~Startup() {
-		close(null).Wait();
+	~Startup()
+	{
+		Close(null).Wait();
 	}
 }
 
@@ -231,22 +275,26 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
 	/// <param name="maxDegreeOfParallelism">The maximum degree of parallelism provided by this scheduler.</param>
 	public LimitedConcurrencyLevelTaskScheduler(int maxDegreeOfParallelism)
 	{
-		if (maxDegreeOfParallelism < 1) throw new ArgumentOutOfRangeException("maxDegreeOfParallelism");
-		_maxDegreeOfParallelism = maxDegreeOfParallelism;
+		if (maxDegreeOfParallelism < 1)
+		{
+			throw new ArgumentOutOfRangeException("maxDegreeOfParallelism");
+		}
+
+		this._maxDegreeOfParallelism = maxDegreeOfParallelism;
 	}
 
 	/// <summary>Queues a task to the scheduler.</summary>
 	/// <param name="task">The task to be queued.</param>
 	protected sealed override void QueueTask(Task task)
 	{
-		// Add the task to the list of tasks to be processed. If there aren't enough
+		// Add the task to the list of tasks to be processed.  If there aren't enough
 		// delegates currently queued or running to process tasks, schedule another.
-		lock (_tasks)
+		lock (this._tasks)
 		{
-			_tasks.AddLast(task);
-			if (_delegatesQueuedOrRunning < _maxDegreeOfParallelism)
+			this._tasks.AddLast(task);
+			if (this._delegatesQueuedOrRunning < this._maxDegreeOfParallelism)
 			{
-				++_delegatesQueuedOrRunning;
+				++this._delegatesQueuedOrRunning;
 				NotifyThreadPoolOfPendingWork();
 			}
 		}
@@ -268,19 +316,19 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
 				while (true)
 				{
 					Task item;
-					lock (_tasks)
+					lock (this._tasks)
 					{
 						// When there are no more items to be processed,
 						// note that we're done processing, and get out.
-						if (_tasks.Count == 0)
+						if (this._tasks.Count == 0)
 						{
-							--_delegatesQueuedOrRunning;
+							--this._delegatesQueuedOrRunning;
 							break;
 						}
 
 						// Get the next item from the queue
-						item = _tasks.First.Value;
-						_tasks.RemoveFirst();
+						item = this._tasks.First.Value;
+						this._tasks.RemoveFirst();
 					}
 
 					// Execute the task we pulled out of the queue
@@ -299,10 +347,16 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
 	protected sealed override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
 	{
 		// If this thread isn't already processing a task, we don't support inlining
-		if (!_currentThreadIsProcessingItems) return false;
+		if (!_currentThreadIsProcessingItems)
+		{
+			return false;
+		}
 
 		// If the task was previously queued, remove it from the queue
-		if (taskWasPreviouslyQueued) TryDequeue(task);
+		if (taskWasPreviouslyQueued)
+		{
+			TryDequeue(task);
+		}
 
 		// Try to run the task.
 		return base.TryExecuteTask(task);
@@ -313,7 +367,10 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
 	/// <returns>Whether the task could be found and removed.</returns>
 	protected sealed override bool TryDequeue(Task task)
 	{
-		lock (_tasks) return _tasks.Remove(task);
+		lock (this._tasks)
+		{
+			return this._tasks.Remove(task);
+		}
 	}
 
 	/// <summary>Gets the maximum concurrency level supported by this scheduler.</summary>
@@ -326,13 +383,22 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
 		bool lockTaken = false;
 		try
 		{
-			Monitor.TryEnter(_tasks, ref lockTaken);
-			if (lockTaken) return _tasks.ToArray();
-			else throw new NotSupportedException();
+			Monitor.TryEnter(this._tasks, ref lockTaken);
+			if (lockTaken)
+			{
+				return this._tasks.ToArray();
+			}
+			else
+			{
+				throw new NotSupportedException();
+			}
 		}
 		finally
 		{
-			if (lockTaken) Monitor.Exit(_tasks);
+			if (lockTaken)
+			{
+				Monitor.Exit(this._tasks);
+			}
 		}
 	}
 }
