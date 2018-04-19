@@ -3,8 +3,13 @@
   "version": "0.0.8",
   "description": "Exports various microsoft office formats to pdfs",
   "author": "Stefanos Kornilios Mitsis Poiitidis <skmp@nillware.com>",
-  "contributors": [ "CyBot <imcybot@gmail.com>" ],
-  "files": [ "office.cs", "lib.js" ],
+  "contributors": [
+    "CyBot <imcybot@gmail.com>"
+  ],
+  "files": [
+    "office.cs",
+    "lib.js"
+  ],
   "main": "lib.js",
   "scripts": {
     "test": "node testrunner.js"
@@ -18,10 +23,10 @@
     "pdf"
   ],
   "dependencies": {
-    "edge-js" : "*"
+    "edge-js": "*"
   },
   "devDependencies": {
-    "node-uuid" : "*"
+    "node-uuid": "*"
   },
   "license": "MIT"
 }
