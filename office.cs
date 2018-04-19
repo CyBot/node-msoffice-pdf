@@ -15,7 +15,7 @@ using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 public class Startup
 {
 	[DllImport("user32.dll", CharSet = CharSet.Auto)]
-	static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+	internal static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
 	[DllImport("oleacc.dll", SetLastError = true)]
 	internal static extern IntPtr GetProcessHandleFromHwnd(IntPtr hwnd);
@@ -23,12 +23,13 @@ public class Startup
 	[DllImport("kernel32.dll")]
 	internal static extern int GetProcessId(IntPtr handle);
 
-	const uint wm_close = 0x0010;
+	private const uint wm_close = 0x0010;
 
-	Word.Application msword;
-	Excel.Application msexcel;
-	PowerPoint.Application mspowerpoint;
-	TaskFactory scheduler;
+	private Word.Application msword;
+	private Excel.Application msexcel;
+	private PowerPoint.Application mspowerpoint;
+	private TaskFactory scheduler;
+
 	public async Task<object> Invoke(object input)
 	{
 		this.scheduler = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
