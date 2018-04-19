@@ -55,7 +55,7 @@ public class Startup
 			{
 				this.msword = new Word.Application
 				{
-					Visible = true,
+					Visible = false,
 					DisplayAlerts = Word.WdAlertLevel.wdAlertsNone,
 					AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable
 				};
@@ -72,7 +72,7 @@ public class Startup
 			{
 				this.msexcel = new Excel.Application
 				{
-					Visible = true,
+					Visible = false,
 					DisplayAlerts = false,
 					DefaultFilePath = Directory.GetCurrentDirectory(),
 					AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable,
@@ -112,7 +112,7 @@ public class Startup
 			Thread.Sleep(100);
 			CreateWord();
 
-			Word.Document doc = this.msword.Documents.OpenNoRepairDialog(file, false, true, false, "", "", true, "", "", Type.Missing, Type.Missing, true, true, Type.Missing, true, Type.Missing);
+			Word.Document doc = this.msword.Documents.OpenNoRepairDialog(file, false, true, false, Type.Missing, Type.Missing, true, Type.Missing, Type.Missing, Type.Missing, Type.Missing, false, true, Type.Missing, true, Type.Missing);
 			Delay(0);
 			try
 			{
@@ -141,7 +141,7 @@ public class Startup
 			Thread.Sleep(100);
 			CreateExcel();
 
-			Excel.Workbook book = this.msexcel.Workbooks.Open(file, 2, true, Type.Missing, "", "", false, Type.Missing, Type.Missing, false, false, Type.Missing, false, true, Excel.XlCorruptLoad.xlNormalLoad);
+			Excel.Workbook book = this.msexcel.Workbooks.Open(file, 2, true, Type.Missing, Type.Missing, Type.Missing, false, Type.Missing, Type.Missing, false, false, Type.Missing, false, true, Excel.XlCorruptLoad.xlNormalLoad);
 			Delay(0);
 
 			try
