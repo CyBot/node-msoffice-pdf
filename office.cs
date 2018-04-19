@@ -29,6 +29,7 @@ public class Startup
 	private Excel.Application msexcel;
 	private PowerPoint.Application mspowerpoint;
 	private TaskFactory scheduler;
+	private bool disableAutomationSecurity = true;
 
 	public async Task<object> Invoke(object input)
 	{
@@ -39,7 +40,8 @@ public class Startup
 			word = (Func<object, Task<dynamic>>)GetWord,
 			excel = (Func<object, Task<dynamic>>)GetExcel,
 			powerPoint = (Func<object, Task<dynamic>>)GetPowerPoint,
-			close = (Func<object, Task<dynamic>>)Close,
+			setDisableAutomationSecurity = (Func<object, Task<dynamic>>)SetDisableAutomationSecurity,
+			close = (Func<object, Task<dynamic>>)Close
 		};
 	}
 
@@ -57,9 +59,12 @@ public class Startup
 				this.msword = new Word.Application
 				{
 					Visible = false,
-					DisplayAlerts = Word.WdAlertLevel.wdAlertsNone,
-					AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable
+					DisplayAlerts = Word.WdAlertLevel.wdAlertsNone
 				};
+				if (this.disableAutomationSecurity)
+				{
+					this.msword.AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable;
+				}
 				this.msword.ChangeFileOpenDirectory(Directory.GetCurrentDirectory());
 			}
 		}
@@ -76,9 +81,12 @@ public class Startup
 					Visible = false,
 					DisplayAlerts = false,
 					DefaultFilePath = Directory.GetCurrentDirectory(),
-					AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable,
 					AskToUpdateLinks = false
 				};
+				if (this.disableAutomationSecurity)
+				{
+					this.msexcel.AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable;
+				}
 			}
 		}
 	}
@@ -93,9 +101,11 @@ public class Startup
 				{
 					Visible = MsoTriState.msoTrue,
 					DisplayAlerts = PowerPoint.PpAlertLevel.ppAlertsNone,
-					AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable
 				};
-
+				if (this.disableAutomationSecurity)
+				{
+					this.mspowerpoint.AutomationSecurity = MsoAutomationSecurity.msoAutomationSecurityForceDisable;
+				}
 				// No way to do this in powerpoint, it seems
 				//this.mspowerpoint.?Path? = Directory.GetCurrentDirectory();
 			}
@@ -104,7 +114,6 @@ public class Startup
 
 	public async Task<dynamic> GetWord(dynamic opts)
 	{
-
 		string file = Path.GetFullPath(opts.input as string);
 		string pdfFile = Path.GetFullPath(opts.output as string);
 
@@ -190,6 +199,16 @@ public class Startup
 
 			//closeInternal();
 			return pdfFile;
+		});
+	}
+
+	public async Task<dynamic> SetDisableAutomationSecurity(dynamic opts)
+	{
+		bool disable = (opts as bool?) ?? false;
+		return await this.scheduler.StartNew(() =>
+		{
+			this.disableAutomationSecurity = disable;
+			return disable;
 		});
 	}
 
