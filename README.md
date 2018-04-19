@@ -78,6 +78,7 @@ msopdf(null, function(error, office) {
   
 ## Release History
 
+* 0.0.8 Use edge-js, allow to disable AutomationSecurity disabling
 * 0.0.7 Rly works nao
 * 0.0.5 ...
 * 0.0.4 Update README.md (x2)
